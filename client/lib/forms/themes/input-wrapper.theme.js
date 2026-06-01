@@ -5,7 +5,7 @@
 export const inputWrapperTheme = {
   slots: {
     wrapper: [
-      'relative flex flex-col gap-1'
+      'relative flex flex-col gap-2'
     ],
     help: 'text-neutral-500',
     error: 'has-error text-xs text-red-500 break-words whitespace-break-spaces',
@@ -35,10 +35,10 @@ export const inputWrapperTheme = {
         wrapper: 'my-1',
       },
       md: {
-        wrapper: 'my-1.5',
+        wrapper: 'my-2',
       },
       lg: {
-        wrapper: 'my-1.5',
+        wrapper: 'my-2',
       }
     },
     mediaStyle: {

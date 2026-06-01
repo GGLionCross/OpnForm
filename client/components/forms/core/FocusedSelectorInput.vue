@@ -37,6 +37,7 @@
           <!-- Option text -->
           <span :class="textClasses()">
             {{ getOptionName(option) }}
+            <span v-if="option.hint" class="block text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 font-normal">{{ option.hint }}</span>
           </span>
 
           <!-- Checkmark for selected state -->

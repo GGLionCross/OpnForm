@@ -327,12 +327,59 @@
         title="Select Options"
       />
       <text-area-input
+        v-if="!showOptionHints"
         v-model="optionsText"
         :name="field.id + '_options_text'"
         class="mt-3"
         label="Set selection options"
         help="Add one option per line"
         @update:model-value="onFieldOptionsChange"
+      />
+      <div v-else class="mt-3">
+        <label class="text-sm font-semibold text-neutral-700 dark:text-neutral-300 block mb-2">Set selection options</label>
+        <div
+          v-for="(option, index) in field[field.type].options"
+          :key="index"
+          class="flex gap-2 items-start mb-2"
+        >
+          <text-input
+            :model-value="option.name"
+            :name="field.id + '_option_name_' + index"
+            class="flex-1"
+            placeholder="Option name"
+            @update:model-value="updateOptionName(index, $event)"
+          />
+          <text-input
+            :model-value="option.hint"
+            :name="field.id + '_option_hint_' + index"
+            class="flex-1"
+            placeholder="Hint (optional)"
+            @update:model-value="updateOptionHint(index, $event)"
+          />
+          <UButton
+            icon="i-heroicons-x-mark"
+            color="neutral"
+            variant="ghost"
+            class="self-start mt-1"
+            @click="removeOption(index)"
+          />
+        </div>
+        <UButton
+          icon="i-heroicons-plus"
+          label="Add option"
+          color="neutral"
+          variant="outline"
+          size="sm"
+          class="mt-1"
+          @click="addOption"
+        />
+      </div>
+      <toggle-switch-input
+        v-model="showOptionHints"
+        :name="field.id + '_show_hints'"
+        class="mt-3"
+        label="Add option hints"
+        help="Show a hint below each option"
       />
       <toggle-switch-input
         v-if="isFocused"
@@ -745,6 +792,7 @@ export default {
   },
   data() {
     return {
+      showOptionHints: false,
       typesWithoutPlaceholder: ['date', 'checkbox', 'files', 'payment', 'matrix', 'signature', 'barcode', 'scale', 'slider', 'rating'],
       allCountries: countryCodes,
       barcodeDecodersOptions: [
@@ -879,6 +927,12 @@ export default {
     if (this.field?.width === undefined || this.field?.width === null) {
       this.field.width = 'full'
     }
+    if (['select', 'multi_select'].includes(this.field?.type)) {
+      const opts = this.field[this.field.type]?.options || []
+      if (opts.some(o => o.hint)) {
+        this.showOptionHints = true
+      }
+    }
   },
 
   mounted() {
@@ -905,6 +959,26 @@ export default {
         this.field.generates_uuid = false
         this.field.hidden = true
       }
+    },
+    updateOptionName(index, val) {
+      const opts = [...this.field[this.field.type].options]
+      opts[index] = { ...opts[index], name: val, id: val }
+      this.field[this.field.type] = { options: opts }
+    },
+    updateOptionHint(index, val) {
+      const opts = [...this.field[this.field.type].options]
+      opts[index] = { ...opts[index], hint: val }
+      this.field[this.field.type] = { options: opts }
+    },
+    removeOption(index) {
+      const opts = [...this.field[this.field.type].options]
+      opts.splice(index, 1)
+      this.field[this.field.type] = { options: opts }
+    },
+    addOption() {
+      const opts = [...(this.field[this.field.type].options || [])]
+      opts.push({ name: '', id: '', hint: '' })
+      this.field[this.field.type] = { options: opts }
     },
     onFieldOptionsChange(val) {
       const vals = (val) ? val.trim().split('\n') : []

@@ -65,12 +65,13 @@
           :selected="selected"
         >
           <span class="flex">
-            <p
+            <div
               class="flex-grow"
               :class="ui.option({ class: props.ui?.slots?.option })"
             >
-              {{ getOptionName(option) }}
-            </p>
+              <p>{{ getOptionName(option) }}</p>
+              <p v-if="option.hint" class="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 font-normal">{{ option.hint }}</p>
+            </div>
             <span
               v-if="selected"
               class="absolute inset-y-0 right-0 flex items-center pr-4 dark:text-white"

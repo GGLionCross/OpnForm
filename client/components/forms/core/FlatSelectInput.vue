@@ -52,9 +52,10 @@
               :option="option"
               :selected="isSelected(option[optionKey])"
             >
-              <p class="flex-grow">
-                {{ option[displayKey] }}
-              </p>
+              <div class="flex-grow">
+                <p>{{ option[displayKey] }}</p>
+                <p v-if="option.hint" class="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">{{ option.hint }}</p>
+              </div>
             </slot>
           </UTooltip>
         </div>

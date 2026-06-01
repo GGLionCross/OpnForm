@@ -4,6 +4,7 @@
       <component
         :is="componentVal"
         v-bind="boundProps"
+        @blur="onFieldBlur"
         @input-filled="$emit('input-filled', { blockId: block?.id })"
       />
       <template #fallback>
@@ -204,12 +205,12 @@ const roundedClass = computed(() => {
 })
 
 // Map select options once at component creation (shuffle if enabled)
-const selectOptions = (() => {
+const selectOptions = computed(() => {
   const field = props.block
   if (!field || !['select', 'multi_select'].includes(field.type)) return null
-  const options = field[field.type]?.options?.map(option => ({ name: option.name, value: option.name })) ?? []
+  const options = field[field.type]?.options?.map(option => ({ name: option.name, value: option.name, hint: option.hint || '' })) ?? []
   return field.shuffle_options && options.length > 1 ? shuffleArray(options) : options
-})()
+})
 
 const boundProps = computed(() => {
   const field = props.block
@@ -243,7 +244,7 @@ const boundProps = computed(() => {
   if (field.type === 'barcode') inputProperties.decoders = field.decoders
 
   if (['select', 'multi_select'].includes(field.type)) {
-    inputProperties.options = selectOptions ?? []
+    inputProperties.options = selectOptions.value ?? []
     inputProperties.multiple = (field.type === 'multi_select')
     inputProperties.allowCreation = (field.allow_creation === true)
     inputProperties.searchable = (inputProperties.options.length > 4)
@@ -312,6 +313,28 @@ const boundProps = computed(() => {
 
   return inputProperties
 })
+
+// --- Custom: on-blur per-field precognition validation (additive) ---
+// Validates a single field via Laravel Precognition when the user leaves it,
+// surfacing the inline error (form.errors) without persisting a submission and
+// without the global alert popup that useFormValidation.validateFields raises.
+const onFieldBlur = () => {
+  const field = props.block
+  if (!field || !field.id || field.type === 'payment') return
+  const vform = dataForm.value
+  const slug = form.value?.slug
+  if (!slug || !vform || typeof vform.validate !== 'function') return
+
+  // Only validate fields the user actually filled; empty/untouched fields are
+  // left alone here (required-empty is still caught on submit).
+  const value = vform[field.id]
+  const isEmpty = value === null || value === undefined || value === ''
+    || (Array.isArray(value) && value.length === 0)
+  if (isEmpty) return
+
+  vform.validate('POST', `/forms/${slug}/answer`, {}, [field.id])
+    .catch(() => { /* 422 expected; error rendered inline via form.errors */ })
+}
 
 const editFieldOptions = () => {
   workingFormStore.openSettingsForField(props.block, true)
