@@ -1,5 +1,5 @@
 <template>
-  <p class="text-xs">
+  <p class="text-xs flex flex-row flex-wrap gap-1 items-center">
     <span
       v-for="file in parsedFiles"
       :key="file.file_url"

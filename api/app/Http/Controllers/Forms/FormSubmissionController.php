@@ -178,29 +178,45 @@ class FormSubmissionController extends Controller
             ], 404);
         }
 
-        if (config('filesystems.default') !== 's3') {
-            return response()->download(
-                Storage::path($filePath),
-                basename($filePath),
-                [
-                    'Content-Type' => 'application/octet-stream',
-                    'X-Content-Type-Options' => 'nosniff',
-                    'Content-Disposition' => 'attachment; filename="' . basename($filePath) . '"'
-                ]
-            );
+        $mimeType = Storage::mimeType($filePath) ?: 'application/octet-stream';
+
+        // R2 may have stored files with wrong MIME type — fall back to extension-based detection
+        if ($mimeType === 'application/octet-stream') {
+            $ext = pathinfo($filePath, PATHINFO_EXTENSION);
+            if ($ext) {
+                $mimeTypes = new \Symfony\Component\Mime\MimeTypes();
+                $guessed = $mimeTypes->getMimeTypes(strtolower($ext));
+                if (!empty($guessed)) {
+                    $mimeType = $guessed[0];
+                }
+            }
         }
 
-        // Force download on S3 as well
-        return redirect(
-            Storage::temporaryUrl(
-                $filePath,
-                now()->addMinute(),
-                [
-                    'ResponseContentDisposition' => 'attachment; filename="' . basename($filePath) . '"',
-                    'ResponseContentType' => 'application/octet-stream'
-                ]
-            )
-        );
+        $isImage = str_starts_with($mimeType, 'image/');
+        $disposition = $isImage
+            ? 'inline; filename="' . basename($filePath) . '"'
+            : 'attachment; filename="' . basename($filePath) . '"';
+
+        $headers = [
+            'Content-Type' => $mimeType,
+            'X-Content-Type-Options' => 'nosniff',
+            'Content-Disposition' => $disposition,
+        ];
+
+        if (config('filesystems.default') !== 's3') {
+            return response()->file(Storage::path($filePath), $headers);
+        }
+
+        // Stream from S3/R2 through Laravel instead of redirecting
+        $stream = Storage::readStream($filePath);
+        $headers['Content-Length'] = Storage::size($filePath);
+
+        return response()->stream(function () use ($stream) {
+            fpassthru($stream);
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
+        }, 200, $headers);
     }
 
     public function destroy(Form $form, $submission_id)

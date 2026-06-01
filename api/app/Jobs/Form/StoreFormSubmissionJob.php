@@ -360,7 +360,15 @@ class StoreFormSubmissionJob implements ShouldQueue
             return null; // Canonical name generation failed
         }
         $completeNewFilename = FileUploadPathService::getFileUploadPath($this->form->id, $movedFileName);
-        Storage::move($fileNameInTmp, $completeNewFilename);
+        $mimeType = $fileNameParser->extension
+            ? (new \Symfony\Component\Mime\MimeTypes())->getMimeTypes($fileNameParser->extension)[0] ?? null
+            : null;
+        if ($mimeType) {
+            Storage::put($completeNewFilename, Storage::get($fileNameInTmp), ['ContentType' => $mimeType]);
+            Storage::delete($fileNameInTmp);
+        } else {
+            Storage::move($fileNameInTmp, $completeNewFilename);
+        }
         return $movedFileName;
     }
 
